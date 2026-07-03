@@ -1,0 +1,6 @@
+test_repo/
+test_repo_clone_*/
+test_results/
+production_environment/
+__pycache__/
+*.pyc
