@@ -30,7 +30,7 @@ class DispatcherHandler(socketserver.BaseRequestHandler):
         if not raw_message:
             return
         
-        print(f"\n[NETWORK INBOUND] -> {raw_message}")
+        print(f"recv: {raw_message}")
         
         # Messages are expected in the format "command:payload1:payload2:..."
         parts = raw_message.split(":")
@@ -74,14 +74,14 @@ class DispatcherHandler(socketserver.BaseRequestHandler):
 
         if deployer_address not in ACTIVE_DEPLOYERS:
             ACTIVE_DEPLOYERS.append(deployer_address)
-            print(f"[POOL UPDATE] Registered free deployer at {deployer_host}:{deployer_port}")
+            print(f"registered new deployer: {deployer_host}:{deployer_port}")
 
         self.request.sendall(b"OK")
 
     def handle_new_commit(self, payload):
         """Handles a 'dispatch' command, indicating a new commit to be tested."""
         commit_id = payload[0]
-        print(f"[QUEUE] Commit flagged by observer : {commit_id[:7]}")
+        print(f"new commit detected: {commit_id[:7]}")
 
         # Add the commit to the queue of pending jobs
         PENDING_COMMITS.append(commit_id)
@@ -97,7 +97,7 @@ class DispatcherHandler(socketserver.BaseRequestHandler):
         # Re-join the rest of the payload in case the logs contained ':'
         raw_logs = ":".join(payload[2:])
 
-        print(f"[RESULTS] Storing completed test run logs for {commit_id[:7]} (Status: {status})")
+        print(f"saving test logs for {commit_id[:7]} (status: {status})")
 
         # Create a directory to store test results if it doesn't exist
         os.makedirs("test_results", exist_ok=True)
@@ -110,14 +110,14 @@ class DispatcherHandler(socketserver.BaseRequestHandler):
         self.request.sendall(b"OK")
 
         if status == "PASS":
-            print(f"[DEPLOY QUEUE] Commit {commit_id[:7]} passed tests. Queuing for deployment.")
+            print(f"commit {commit_id[:7]} passed! queueing deploy...")
             PENDING_DEPLOYMENTS.append(commit_id)
             threading.Thread(target=allocate_jobs_to_deployers).start()
 
     def handle_deploy_results(self, payload):
         commit_id = payload[0]
         raw_logs = ":".join(payload[1:])
-        print(f"[DEPLOY RESULTS] Deployment logs for {commit_id[:7]}:\n{raw_logs}")
+        print(f"deploy logs for {commit_id[:7]}:\n{raw_logs}")
         self.request.sendall(b"OK")
    
 def allocate_jobs_to_runners():
@@ -143,19 +143,19 @@ def allocate_jobs_to_runners():
             
             if reply == "OK":
                 # The runner accepted the job
-                print(f"[JOB DISPATCHED] Assigned commit {current_commit[:7]} to runner on port {port}")
+                print(f"assigned commit {current_commit[:7]} to runner on port {port}")
                 PENDING_COMMITS.pop(0) # Remove from wait list
                 # Since the job is assigned, we can stop looking for a runner
                 break
                 
             elif reply == "BUSY":
                 # The runner is busy, try the next one
-                print(f"[LOAD BALANCER] Runner on port {port} is working. Checking next...")
+                print(f"runner {port} is busy, checking next")
                 continue
                 
         except Exception:
             # If communication fails, assume the runner has crashed or is unreachable
-            print(f"[CRASH DETECTED] Runner on port {port} dropped. Purging from active pool.")
+            print(f"runner {port} dropped connection, removing from pool")
             ACTIVE_RUNNERS.remove(runner)
 
 def allocate_jobs_to_deployers():
@@ -170,14 +170,14 @@ def allocate_jobs_to_deployers():
         try:
             reply = communicate(host, port, f"deploy:{current_commit}")
             if reply == "OK":
-                print(f"[JOB DISPATCHED] Assigned deployment of {current_commit[:7]} to deployer on port {port}")
+                print(f"assigned deploy for {current_commit[:7]} to port {port}")
                 PENDING_DEPLOYMENTS.pop(0)
                 break
             elif reply == "BUSY":
-                print(f"[LOAD BALANCER] Deployer on port {port} is working. Checking next...")
+                print(f"deployer {port} busy, checking next")
                 continue
         except Exception:
-            print(f"[CRITICAL] Deployer on port {port} dropped. Purging from active pool.")
+            print(f"deployer {port} disconnected, removing")
             ACTIVE_DEPLOYERS.remove(deployer)
 
 
@@ -192,14 +192,13 @@ if __name__ == "__main__":
         DispatcherHandler
     )
     
-    print(f"=== Custom CI Engine Central Dispatcher Live ===")
-    print(f"Listening for connections on {SERVER_HOST}:{SERVER_PORT}...")
+    print(f"starting dispatcher on {SERVER_HOST}:{SERVER_PORT}...")
     
     # Start the server and listen for connections indefinitely
     try:
         dispatcher_server.serve_forever()
     except KeyboardInterrupt:
         # Allow a clean shutdown with Ctrl+C
-        print("\nShutting down central dispatcher hub safely.")
+        print("\nshutting down dispatcher")
         dispatcher_server.server_close()
     

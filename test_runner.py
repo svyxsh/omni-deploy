@@ -17,7 +17,7 @@ class TestRunnerHandler(socketserver.BaseRequestHandler):
         if not raw_message:
             return
 
-        print(f"\n[RUNNER INBOUND] -> {raw_message}")
+        print(f"recv: {raw_message}")
         parts = raw_message.split(":")
         command_type = parts[0]
 
@@ -44,7 +44,7 @@ class TestRunnerHandler(socketserver.BaseRequestHandler):
 
 def execute_test_suite(commit_id, repo_path, dispatcher_address):
     global IS_BUSY
-    print(f"[WORKER] Starting test workflow for commit: {commit_id[:7]}")
+    print(f"running tests for commit: {commit_id[:7]}")
     try:
         # FIX: Added check=True to ensure errors are caught and not silently ignored
         subprocess.run(["git", "clean", "-d", "-f", "-x"], cwd=repo_path, capture_output=True, check=True)
@@ -81,9 +81,9 @@ if __name__ == "__main__":
     RUNNER_PORT = 8900
     DISPATCHER_ADDRESS = ("localhost", 8888)
 
-    print("=== TEST RUNNER DIAGNOSTIC BOOT ===")
+    print("starting test runner...")
     if not os.path.exists(RUNNER_CLONE_PATH):
-        print(f"[FAIL] Path could not be found: {RUNNER_CLONE_PATH}")
+        print(f"error: couldn't find {RUNNER_CLONE_PATH}")
         exit(1)
 
     runner_server = CustomRunnerServer(( "localhost", RUNNER_PORT), TestRunnerHandler, RUNNER_CLONE_PATH, DISPATCHER_ADDRESS)
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     try:
         reply = communicate(DISPATCHER_ADDRESS[0], DISPATCHER_ADDRESS[1], f"register:localhost:{RUNNER_PORT}")
         if reply == "OK":
-            print("[SUCCESS] Check-in confirmed with Dispatcher.")
+            print("connected to dispatcher")
             runner_server.serve_forever()
     except Exception as e:
-        print(f"[CRITICAL] Connection to Dispatcher failed: {e}")
+        print(f"failed to connect to dispatcher: {e}")

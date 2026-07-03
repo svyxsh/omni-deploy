@@ -16,7 +16,7 @@ class DeployRunnerHandler(socketserver.BaseRequestHandler):
         if not raw_message:
             return
 
-        print(f"\n[DEPLOYER INBOUND] -> {raw_message}")
+        print(f"recv: {raw_message}")
         parts = raw_message.split(":")
         command_type = parts[0]
 
@@ -42,7 +42,7 @@ class DeployRunnerHandler(socketserver.BaseRequestHandler):
 
 def execute_deployment(commit_id, repo_path, dispatcher_address):
     global IS_BUSY
-    print(f"[WORKER] Starting deployment workflow for commit: {commit_id[:7]}")
+    print(f"running deploy for commit: {commit_id[:7]}")
     try:
         subprocess.run(["git", "clean", "-d", "-f", "-x"], cwd=repo_path, capture_output=True, check=True)
         subprocess.run(["git", "fetch", "origin"], cwd=repo_path, capture_output=True, check=True)
@@ -78,9 +78,9 @@ if __name__ == "__main__":
     DEPLOYER_PORT = 8901
     DISPATCHER_ADDRESS = ("localhost", 8888)
 
-    print("=== DEPLOY RUNNER DIAGNOSTIC BOOT ===")
+    print("starting deploy runner...")
     if not os.path.exists(DEPLOYER_CLONE_PATH):
-        print(f"[FAIL] Path could not be found: {DEPLOYER_CLONE_PATH}")
+        print(f"error: couldn't find {DEPLOYER_CLONE_PATH}")
         print("Please clone the repo into this path to run the deployer.")
         exit(1)
 
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     try:
         reply = communicate(DISPATCHER_ADDRESS[0], DISPATCHER_ADDRESS[1], f"deploy_register:localhost:{DEPLOYER_PORT}")
         if reply == "OK":
-            print("[SUCCESS] Check-in confirmed with Dispatcher.")
+            print("connected to dispatcher")
             deployer_server.serve_forever()
     except Exception as e:
-        print(f"[CRITICAL] Connection to Dispatcher failed: {e}")
+        print(f"failed to connect to dispatcher: {e}")
