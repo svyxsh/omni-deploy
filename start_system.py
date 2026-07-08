@@ -1,7 +1,9 @@
+import os
+os.system('') # Enable ANSI escape codes in Windows terminal
+
 import subprocess
 import time
 import sys
-import os
 import threading
 from datetime import datetime
 
@@ -35,9 +37,19 @@ def stream_output(process, prefix):
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"{color}[{timestamp}] {prefix_padded} |{reset} {raw_text}")
 
-print("starting CI/CD system boot manager...")
+ASCII_ART = fr"""
+{COLORS['DISPATCHER']}  ___               _{COLORS['TEST_RUNNER']} ____             _{COLORS['DEPLOY_RUNNER']}           
+{COLORS['DISPATCHER']} / _ \ _ __ ___  _ _(_){COLORS['TEST_RUNNER']}  _ \ ___ _ __ | |{COLORS['DEPLOY_RUNNER']} ___ _   _ 
+{COLORS['DISPATCHER']}| | | | '_ ` _ \| '_ \ {COLORS['TEST_RUNNER']}| | |/ _ \ '_ \| |{COLORS['DEPLOY_RUNNER']}/ _ \ | | |
+{COLORS['DISPATCHER']}| |_| | | | | | | | | |{COLORS['TEST_RUNNER']} |_| |  __/ |_) | |{COLORS['DEPLOY_RUNNER']}  __/ |_| |
+{COLORS['DISPATCHER']} \___/|_| |_| |_|_| |_{COLORS['TEST_RUNNER']}|____/ \___| .__/|_|{COLORS['DEPLOY_RUNNER']}\___|\__, |
+{COLORS['DISPATCHER']}                           {COLORS['TEST_RUNNER']}        |_|      {COLORS['DEPLOY_RUNNER']}     |___/ {COLORS['RESET']}
+"""
 
-choice = input("open in separate external windows? (y/n): ").strip().lower()
+print(ASCII_ART)
+print(f"{COLORS['REPO_OBSERVER']}>> INITIALIZING DISTRIBUTED CI/CD ENGINE...{COLORS['RESET']}\n")
+
+choice = input(f"Launch microservices in separate external windows? (y/n) [{COLORS['TEST_RUNNER']}n{COLORS['RESET']}]: ").strip().lower()
 separate_windows = choice == 'y'
 
 processes = []

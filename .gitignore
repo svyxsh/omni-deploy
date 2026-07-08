@@ -4,3 +4,4 @@ test_results/
 production_environment/
 __pycache__/
 *.pyc
+*.ipynb
